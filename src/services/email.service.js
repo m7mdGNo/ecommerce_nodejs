@@ -7,7 +7,8 @@ class EmailService {
     this.transporter = nodemailer.createTransport({
       host: env.email.host,
       port: env.email.port,
-      secure: env.email.secure, // true for 465, false for other ports
+      secure: Number(env.email.port) === 465, // true for port 465, false for 587
+      requireTLS: env.email.secure, // Ensure STARTTLS is used if secure is true
       auth: {
         user: env.email.user,
         pass: env.email.pass,
