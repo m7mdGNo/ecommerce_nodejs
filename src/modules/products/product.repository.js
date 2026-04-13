@@ -26,7 +26,7 @@ class ProductRepository {
 
   async updateById(id, data) {
     return Product.findByIdAndUpdate(id, data, {
-      new: true,
+      returnDocument: 'after',
       runValidators: true,
     }).lean()
   }

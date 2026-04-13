@@ -30,6 +30,7 @@ const errorMiddleware = (err, req, res, next) => {
     url: req.originalUrl,
     method: req.method,
     stack: err.stack,
+    details: err.errors // Important for debugging validation failures
   })
 
   res.status(statusCode).json({

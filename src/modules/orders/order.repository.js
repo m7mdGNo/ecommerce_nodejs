@@ -18,7 +18,7 @@ class OrderRepository {
   }
 
   async updateStatus(orderId, status) {
-    return Order.findByIdAndUpdate(orderId, { status }, { new: true, runValidators: true })
+    return Order.findByIdAndUpdate(orderId, { status }, { returnDocument: 'after', runValidators: true })
   }
 }
 
