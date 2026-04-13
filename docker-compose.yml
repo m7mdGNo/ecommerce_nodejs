@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: nodejs_backend
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - MONGO_URI=mongodb://mongo:27017/nodejs_app
+      - NODE_ENV=development
+      # Use .env as a convenient way to inject secrets
+    env_file:
+      - .env
+    volumes:
+      # Sync source code for hot reload (nodemon)
+      - .:/usr/src/app
+      # Keep node_modules strictly inside the container
+      - /usr/src/app/node_modules
+    command: npm run dev
+    depends_on:
+      - mongo
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:latest
+    container_name: nodejs_mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+
+volumes:
+  mongo_data:
