@@ -3,6 +3,7 @@ require('dotenv').config()
 const app = require('./app')
 const connectDB = require('./config/db')
 const logger = require('./config/logger')
+require('./workers/email.worker')
 
 const PORT = process.env.PORT || 3000
 

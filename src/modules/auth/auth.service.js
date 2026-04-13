@@ -11,6 +11,11 @@ class AuthService {
     }
 
     const user = await authRepository.createUser({ name, email, password })
+    
+    // Dispatch background email task
+    const emailQueue = require('../../queues/email.queue')
+    emailQueue.add('welcome-email', { to: user.email, name: user.name })
+
     const token = generateToken(user._id, user.role)
 
     return {
