@@ -7,6 +7,7 @@ const rateLimit = require('express-rate-limit')
 const errorMiddleware = require('./middlewares/error.middleware')
 const authRoutes = require('./modules/auth/auth.routes')
 const productRoutes = require('./modules/products/product.routes')
+const orderRoutes = require('./modules/orders/order.routes')
 
 const app = express()
 
@@ -32,6 +33,7 @@ app.get('/', (req, res) => {
 
 app.use('/api/auth', authRoutes)
 app.use('/api/products', productRoutes)
+app.use('/api/orders', orderRoutes)
 
 // --- 404 Handler ---
 app.use((req, res) => {
