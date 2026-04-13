@@ -3,62 +3,70 @@ const productRepository = require('../products/product.repository')
 const ApiError = require('../../utils/ApiError')
 
 class OrderService {
-  async createOrder(userId, { items, shippingAddress, paymentType }) {
+  async createOrder(userId, idempotencyKey, { items, shippingAddress, paymentType }) {
+    if (idempotencyKey) {
+        const existingOrder = await orderRepository.findByIdempotencyKeyAndUser(idempotencyKey, userId)
+        if (existingOrder) {
+            return { order: existingOrder, isNew: false }
+        }
+    }
+
     if (!items || items.length === 0) {
       throw ApiError.badRequest('Order items cannot be empty')
     }
 
     let totalPrice = 0
     const processedItems = []
+    const reservedItems = []
 
-    // Verify products, generate total, and capture snapshot price
-    for (const item of items) {
-      const product = await productRepository.findById(item.product)
-      if (!product) {
-        throw ApiError.notFound(`Product not found: ${item.product}`)
-      }
-      
-      // Basic stock validation (assuming simple deduction logic later or cod)
-      if (product.stock < item.quantity) {
-        throw ApiError.badRequest(`Insufficient stock for product: ${product.name}`)
-      }
-
-      totalPrice += product.price * item.quantity
-      
-      processedItems.push({
-        product: product._id,
-        quantity: item.quantity,
-        price: product.price // Snapshot price at time of order
-      })
-    }
-
-    // Determine initial status based on payment type
-    let status = 'pending'
-    if (paymentType === 'cod') {
-        // Cash on delivery could arguably be pending until collected, but for this context it's standard processing/pending.
-        status = 'pending'
-    }
-
-    const orderData = {
-      user: userId,
-      items: processedItems,
-      shippingAddress,
-      paymentType,
-      status,
-      totalPrice,
-    }
-
-    const order = await orderRepository.create(orderData)
-
-    // Automatically deduct stock 
-    for (const item of processedItems) {
-        const product = await productRepository.findById(item.product)
-        if (product) {
-            await productRepository.updateById(product._id, { stock: product.stock - item.quantity })
+    try {
+      for (const item of items) {
+        // Attempt atomic deduction
+        const product = await productRepository.decrementStockAtomically(item.product, item.quantity)
+        
+        if (!product) {
+          // If null, it means either product DNE or stock is < quantity
+          const existingProduct = await productRepository.findById(item.product)
+          if (!existingProduct) throw ApiError.notFound(`Product not found: ${item.product}`)
+          throw ApiError.badRequest(`Insufficient stock for product: ${existingProduct.name}`)
         }
-    }
 
-    return order
+        reservedItems.push({ productId: product._id, quantity: item.quantity })
+        totalPrice += product.price * item.quantity
+
+        processedItems.push({
+          product: product._id,
+          quantity: item.quantity,
+          price: product.price // Snapshot price at time of order
+        })
+      }
+
+      let status = 'pending'
+      if (paymentType === 'cod') {
+          status = 'pending'
+      }
+
+      const orderData = {
+        user: userId,
+        items: processedItems,
+        shippingAddress,
+        paymentType,
+        status,
+        totalPrice,
+        idempotencyKey
+      }
+
+      const order = await orderRepository.create(orderData)
+      return { order, isNew: true }
+
+    } catch (error) {
+      // Rollback reserved stock if ANY failure occurs during deduction or order creation
+      for (const resItem of reservedItems) {
+        await productRepository.incrementStockAtomically(resItem.productId, resItem.quantity)
+      }
+      
+      throw error // Surface the original error to the controller
+    }
   }
 
   async getUserOrders(userId, queryOptions = {}) {

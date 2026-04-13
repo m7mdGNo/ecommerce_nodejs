@@ -5,11 +5,16 @@ const orderItemSchema = Joi.object({
   quantity: Joi.number().integer().min(1).required(),
 })
 
-exports.createOrder = Joi.object({
-  items: Joi.array().items(orderItemSchema).min(1).required(),
-  shippingAddress: Joi.string().required(),
-  paymentType: Joi.string().valid('cod', 'credit').default('cod'),
-})
+exports.createOrder = {
+  headers: Joi.object({
+    'x-idempotency-key': Joi.string().required(),
+  }).unknown(true), // We allow unknown headers otherwise express defaults throw errors
+  body: Joi.object({
+    items: Joi.array().items(orderItemSchema).min(1).required(),
+    shippingAddress: Joi.string().required(),
+    paymentType: Joi.string().valid('cod', 'credit').default('cod'),
+  })
+}
 
 exports.updateOrderStatus = Joi.object({
   status: Joi.string().valid('pending', 'failed', 'canceled', 'paid').required(),

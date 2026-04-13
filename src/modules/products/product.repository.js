@@ -35,6 +35,25 @@ class ProductRepository {
     return Product.findByIdAndDelete(id)
   }
 
+  async decrementStockAtomically(productId, quantity) {
+    // Atomically decrement stock if and only if existing stock >= quantity
+    // Returns the newly updated document or null if condition wasn't met.
+    return Product.findOneAndUpdate(
+      { _id: productId, stock: { $gte: quantity } },
+      { $inc: { stock: -quantity } },
+      { returnDocument: 'after' }
+    ).lean()
+  }
+
+  async incrementStockAtomically(productId, quantity) {
+    // Atomically increment stock for rollbacks
+    return Product.findByIdAndUpdate(
+      productId,
+      { $inc: { stock: quantity } },
+      { returnDocument: 'after' }
+    ).lean()
+  }
+
   async search(query) {
     return Product.find({ $text: { $search: query } }).lean()
   }

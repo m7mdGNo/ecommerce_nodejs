@@ -7,7 +7,7 @@ const ApiError = require('../utils/ApiError')
 const validate = (schema) => (req, res, next) => {
   const validationErrors = []
 
-  for (const key of ['params', 'query', 'body']) {
+  for (const key of ['params', 'query', 'body', 'headers']) {
     if (schema[key]) {
       const { error, value } = schema[key].validate(req[key], {
         abortEarly: false,

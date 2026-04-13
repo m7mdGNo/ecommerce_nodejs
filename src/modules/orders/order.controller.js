@@ -3,7 +3,13 @@ const ApiResponse = require('../../utils/response')
 const asyncHandler = require('../../utils/asyncHandler')
 
 exports.createOrder = asyncHandler(async (req, res) => {
-  const order = await orderService.createOrder(req.user.id, req.body)
+  const idempotencyKey = req.headers['x-idempotency-key']
+  const { order, isNew } = await orderService.createOrder(req.user.id, idempotencyKey, req.body)
+  
+  if (!isNew) {
+    return ApiResponse.success(res, order, 'Order already created with this idempotency key')
+  }
+  
   ApiResponse.created(res, order, 'Order created successfully')
 })
 

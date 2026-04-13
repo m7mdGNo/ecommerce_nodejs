@@ -9,6 +9,10 @@ class OrderRepository {
     return Order.findById(orderId).populate('items.product', 'name price images')
   }
 
+  async findByIdempotencyKeyAndUser(idempotencyKey, userId) {
+    return Order.findOne({ idempotencyKey, user: userId })
+  }
+
   async findByUserId(userId, limit = 10, skip = 0) {
     return Order.find({ user: userId })
       .populate('items.product', 'name price images')

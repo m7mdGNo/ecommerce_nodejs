@@ -45,6 +45,11 @@ const orderSchema = new mongoose.Schema(
       required: true,
       default: 0.0,
     },
+    idempotencyKey: {
+      type: String,
+      unique: true,
+      sparse: true, // Only enforces uniqueness if the field is actually present
+    },
   },
   {
     timestamps: true,
